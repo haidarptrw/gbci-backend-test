@@ -1,0 +1,41 @@
+services:
+  mongodb:
+    ports:
+      - "27017:27017" # Expose for local debugging
+
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+
+  redis:
+    ports:
+      - "6379:6379" # Expose for local debugging
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - /app/node_modules
+    command: pnpm run start:dev
+    ports:
+      - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - node_modules/
+            - dist/
+            - .git/
+        
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json

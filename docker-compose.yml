@@ -1,0 +1,73 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_container
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - nestjs_network
+    deploy:
+      resources:
+        limits:
+          memory: 350M 
+        reservations:
+          memory: 150M
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    networks:
+      - nestjs_network
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 150M
+
+  redis:
+    image: redis:alpine
+    container_name: redis_container
+    command: redis-server --requirepass "${REDIS_PASSWORD}"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nestjs_network
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+        reservations:
+          memory: 50M
+
+  api:
+    build: .
+    environment:
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/nest?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+    depends_on:
+      - mongodb
+      - rabbitmq
+      - redis
+    networks:
+      - nestjs_network
+
+volumes:
+  mongo-data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  nestjs_network:
+    driver: bridge
