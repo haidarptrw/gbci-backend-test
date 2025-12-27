@@ -17,23 +17,14 @@ const ZodiacSchema = z.enum([
 
 export const CreateProfileSchema = z.object({
     displayName: z.string().optional(),
-    
     about: z.string().max(500).optional(),
-    
     interest: z.string().optional(),
-    
-    gender: GenderSchema.optional(),
-    
+    gender: GenderSchema.optional(),    
     birthday: z.iso.datetime().optional(), 
-    
-    horoscope: HoroscopeSchema.optional(),
-    
+    horoscope: HoroscopeSchema.optional(), 
     zodiac: ZodiacSchema.optional(),
-    
     height: z.number().int().positive().lt(300).optional(),
-    
     weight: z.number().int().positive().lt(300).optional(),
-    
     bannerUrl: z.string().optional(), 
 });
 

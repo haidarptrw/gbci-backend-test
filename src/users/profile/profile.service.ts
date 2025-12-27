@@ -5,6 +5,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Effect } from "effect";
 import { DatabaseError, UserNotFound } from "src/common/errors";
 import { UpdateProfileDto } from "../dto/profile.dto";
+import { mapDateToHoroscope, mapDateToZodiac } from "src/common/utils/calculator";
 
 @Injectable()
 export class ProfileService {
@@ -30,6 +31,17 @@ export class ProfileService {
 
     updateProfile(userId: string, dto: UpdateProfileDto) {
         return Effect.gen(this, function* () {
+            if (dto.birthday) {
+                const date = new Date(dto.birthday);
+
+                if (!dto.horoscope) {
+                    dto.horoscope = yield* mapDateToHoroscope(date);
+                }
+                if (!dto.zodiac) {
+                    dto.zodiac = yield* mapDateToZodiac(date);
+                }
+            }
+            
             const updatedUser = yield* Effect.tryPromise({
                 try: () => this.userModel.findByIdAndUpdate(
                     userId,
