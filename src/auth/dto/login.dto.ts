@@ -2,7 +2,7 @@ import { createZodDto } from "nestjs-zod";
 import z from "zod";
 
 export const LoginSchema = z.object({
-    emailOrUsername: z.string({error: "Invalid email address or username"}),
+    identifier: z.string({error: "Invalid email address or username"}),
     password: z.string().min(1, {error: "Password is required"}),
 });
 

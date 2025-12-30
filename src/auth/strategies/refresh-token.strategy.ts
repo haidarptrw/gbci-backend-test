@@ -3,14 +3,18 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Effect, Exit } from "effect";
 import { Request } from "express";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { JwtPayload, RefreshUser } from "src/common/types";
+import { JwtPayload} from "src/common/types";
 import { UsersService } from "src/users/users.service";
 import * as bcrypt from 'bcrypt';
 import { InvalidRefreshToken } from "src/common/errors";
+import { AppConfigService } from "src/common/configs/app-config.service";
 
 @Injectable()
 export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
-    constructor(private readonly usersService: UsersService) {
+    constructor(
+        private readonly usersService: UsersService, 
+        configService: AppConfigService
+    ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
                 (req: Request) => {
@@ -18,18 +22,12 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
                 },
                 ExtractJwt.fromAuthHeaderAsBearerToken(),
             ]),
-            secretOrKey: process.env.JWT_REFRESH_SECRET!,
+            secretOrKey: configService.jwtRefreshSecret,
             passReqToCallback: true,
         })
     }
-    async validate(req: Request, payload: any): Promise<RefreshUser> {
+    async validate(payload: any) {
         const validationProgram = Effect.gen(this, function* () {
-            const rawRefreshToken = req.cookies?.refreshToken || req.get('Authorization')?.replace('Bearer', '').trim();
-
-            if (!rawRefreshToken) {
-                return yield* Effect.fail(new UnauthorizedException('Refresh token missing'));
-            }
-
             const userId = payload.sub;
 
             const user = yield* this.usersService.findByIdWithRefreshToken(userId).pipe(
@@ -40,22 +38,7 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
                 return yield* Effect.fail(new UnauthorizedException('User not found'));
             }
 
-            const refreshToken = user.refreshToken;
-            if (!refreshToken) {
-                return yield* Effect.fail(new UnauthorizedException('Token not found'));
-            }
-
-            const isMatch = yield* Effect.tryPromise(() => bcrypt.compare(rawRefreshToken, refreshToken));
-
-            if (!isMatch) {
-                return yield* Effect.fail(new UnauthorizedException('Invalid or revoked refresh token'));
-            }
-
-            return {
-                userId: user._id.toString(),
-                email: user.email,
-                refreshToken: rawRefreshToken
-            };
+            return user;
         });
 
         const exit = await Effect.runPromiseExit(validationProgram);

@@ -8,10 +8,6 @@ services:
       - "5672:5672"
       - "15672:15672" # Management UI
 
-  redis:
-    ports:
-      - "6379:6379" # Expose for local debugging
-
   api:
     build:
       context: .

@@ -32,35 +32,54 @@ services:
         reservations:
           memory: 150M
 
-  redis:
-    image: redis:alpine
-    container_name: redis_container
-    command: redis-server --requirepass "${REDIS_PASSWORD}"
-    volumes:
-      - redis_data:/data
-    networks:
-      - nestjs_network
-    deploy:
-      resources:
-        limits:
-          memory: 100M
-        reservations:
-          memory: 50M
-
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${NODE_ENV}
+    ports:
+      - "${PORT}:${PORT}"
     environment:
-      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/nest?authSource=admin
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+      NODE_ENV: ${NODE_ENV} 
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB: ${MONGO_DB}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE}
+      WATCHPACK_POLLING: ${WATCHPACK_POLLING}
+
+      # Pass Atomic RabbitMQ Vars
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASS}
+
+      # Pass Auth Secrets
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET}
+      RESET_PASSWORD_LINK: ${RESET_PASSWORD_LINK}
     depends_on:
       - mongodb
       - rabbitmq
-      - redis
+      # - redis
     networks:
       - nestjs_network
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - node_modules/
+            - dist/
+            - .git/
+        
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
 
 volumes:
   mongo-data:

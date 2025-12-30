@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Horoscope, Zodiac } from "../enums/profiles";
+import { Horoscope, Zodiac } from "../effect/enums/profiles";
 import { InvalidDateError } from "../errors";
 
 // Hard-coded zodiac from provided table

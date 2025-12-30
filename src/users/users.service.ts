@@ -1,156 +1,190 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { User } from "./schema/user.schema";
-import { Data, Effect } from "effect";
+import { Context, Effect } from "effect";
 import { BcryptError, DatabaseError, UserAlreadyExists, UserNotFound } from "src/common/errors";
 import { RegisterUserDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
-import { UnknownException } from "effect/Cause";
+import { UsersRepository } from "src/common/effect/services/repositories";
+import { USERS_REPO_TOKEN } from "./users.token";
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectModel(User.name) private userModel: Model<User>) { }
+    constructor(
+        @Inject(USERS_REPO_TOKEN)
+        private repo: Context.Tag.Service<UsersRepository>
+    ) { }
 
-    findById(id: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield*
-                Effect.tryPromise({
-                    try: () => this.userModel.findOne({ _id: id, deletedAt: null }).lean().exec(),
-                    catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-                });
+    findById(id: string) {
+        return Effect.provideService(
+            this.findByIdLogic(id),
+            UsersRepository,
+            this.repo
+        );
+    }
 
-            if (!user) {
-                return yield* new UserNotFound({ id });
-            }
+    findByEmail(email: string) {
+        return Effect.provideService(
+            this.findByEmailLogic(email),
+            UsersRepository,
+            this.repo
+        );
+    }
 
-            return user;
+    findByUsername(userName: string) {
+        return Effect.provideService(
+            this.findByUsernameLogic(userName),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    findByUsernameOrEmail(identifier: string) {
+        return Effect.provideService(
+            this.findByUsernameOrEmailLogic(identifier),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    findByIdWithRefreshToken(id: string) {
+        return Effect.provideService(
+            this.findByIdWithRefreshTokenLogic(id),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    updateRefreshToken(userId: string, refreshToken: string) {
+        return Effect.provideService(
+            this.updateRefreshTokenLogic(userId, refreshToken),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    create(data: RegisterUserDto) {
+        return Effect.provideService(
+            this.createLogic(data),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    deleteById(id: string) {
+        return Effect.provideService(
+            this.deleteByIdLogic(id),
+            UsersRepository,
+            this.repo
+        )
+    }
+
+    updatePassword(userId: string, plainPassword: string) {
+        return Effect.provideService(
+            this.updatePasswordLogic(userId, plainPassword), 
+            UsersRepository, 
+            this.repo
+        );
+    }
+
+    // ========== BUSINESS LOGIC ====================
+
+    public findByIdLogic(id: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.findById(id);
         });
+
+        return program;
     }
 
-    findByEmail(email: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield* Effect.tryPromise({
-                try: () => this.userModel.findOne({ email, deletedAt: null }).select('+password').lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-            });
-
-            if (!user) {
-                return yield* new UserNotFound({ email });
-            }
-
-            return user;
-        })
-    }
-
-    findByUsername(userName: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield* Effect.tryPromise({
-                try: () => this.userModel.findOne({ userName, deletedAt: null }).select('+password').lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-            });
-
-            if (!user) {
-                return yield* new UserNotFound({ userName });
-            }
-
-            return user;
-        })
-    }
-
-    findByUsernameOrEmail(identifier: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield* Effect.tryPromise({
-                try: () => this.userModel.findOne({
-                    $or: [{ email: identifier }, { userName: identifier }],
-                    deletedAt: null
-                }).select('+password').lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-            });
-
-            if (!user) {
-                return yield* new UserNotFound({ id: identifier });
-            }
-
-            return user;
+    public findByEmailLogic(email: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.findByEmail(email);
         });
+
+        return program;
     }
 
-    findByIdWithRefreshToken(id: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield* Effect.tryPromise({
-                try: () => this.userModel.findOne({ _id: id, deletedAt: null }).select('+refreshToken').lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-            });
-
-            if (!user) {
-                return yield* new UserNotFound({ id });
-            }
-            return user;
+    public findByUsernameLogic(userName: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.findByUsername(userName);
         });
+
+        return program;
     }
 
-    updateRefreshToken(userId: string, refreshToken: string): Effect.Effect<void, DatabaseError | BcryptError> {
-        return Effect.gen(this, function* () {
+    public findByUsernameOrEmailLogic(identifier: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.findByUsernameOrEmail(identifier);
+        });
+
+        return program;
+    }
+
+    public findByIdWithRefreshTokenLogic(id: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.findByIdWithRefreshToken(id);
+        });
+
+        return program;
+    }
+
+    public updateRefreshTokenLogic(userId: string, refreshToken: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
             const hash = yield* Effect.tryPromise({
                 try: async () => await bcrypt.hash(refreshToken, 10),
                 catch: () => new BcryptError()
             });
 
-            yield* Effect.tryPromise({
-                try: () => this.userModel.findByIdAndUpdate(userId, { refreshToken: hash }).exec(),
-                catch: (error) => new DatabaseError({ message: 'Update token failed', originalError: error })
-            });
+            return yield* repo.updateRefreshToken(userId, hash);
         });
+
+        return program;
     }
 
     /// Create new User (called via register API)
-    create(data: RegisterUserDto): Effect.Effect<User, DatabaseError | UserAlreadyExists | BcryptError> {
-        return Effect.gen(this, function* () {
+    public createLogic(data: RegisterUserDto) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+
             const hashedPassword = yield* Effect.tryPromise({
                 try: async () => await bcrypt.hash(data.password, 10),
-                catch: () => { 
-                    console.log("error hashing the password")
-                    return new BcryptError() 
-                }
-            });
-            const newUser = yield* Effect.tryPromise({
-                try: async () => {
-                    const createdUser = new this.userModel({
-                        ...data,
-                        password: hashedPassword
-                    });
-                    return await createdUser.save();
-                },
-                catch: (error: any) => {
-                    if (error.code === 11000) {
-                        return new UserAlreadyExists({ email: data.email });
-                    }
-
-                    return new DatabaseError({ message: 'Creation failed', originalError: error });
-                }
+                catch: () => new BcryptError()
             });
 
-            return newUser.toObject();
+            const userToCreate = { ...data, password: hashedPassword };
+            const newUser = yield* repo.create(userToCreate);
+            return newUser;
         });
+
+        return program;
     }
 
-    deleteById(id: string): Effect.Effect<User, UserNotFound | DatabaseError> {
+    public deleteByIdLogic(id: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* UsersRepository;
+            return yield* repo.deleteById(id);
+        });
+
+        return program;
+    }
+
+    public updatePasswordLogic(userId: string, plainPassword: string) {
         return Effect.gen(this, function* () {
-            const deletedUser = yield* Effect.tryPromise({
-                try: () => this.userModel.findByIdAndUpdate(
-                    id,
-                    { deletedAt: new Date() },
-                    { new: true }
-                ).lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'Delete failed', originalError: error })
+            const repo = yield* UsersRepository;
+            const hashedPassword = yield* Effect.tryPromise({
+                try: () => bcrypt.hash(plainPassword, 10),
+                catch: () => new BcryptError()
             });
 
-            if (!deletedUser) {
-                return yield* new UserNotFound({ id });
-            }
-
-            return deletedUser;
-        });
+            return yield* repo.updatePassword(userId, hashedPassword);
+        })
     }
 }

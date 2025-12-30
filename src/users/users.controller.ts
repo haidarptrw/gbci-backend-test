@@ -1,8 +1,6 @@
 import { Controller, Get, InternalServerErrorException, NotFoundException, Param, UseGuards } from "@nestjs/common";
 import { UsersService } from "./users.service";
-import { Effect, Exit, Match } from "effect";
-import { AuthGuard } from "@nestjs/passport";
-import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
+import { Console, Effect, Exit, Match } from "effect";
 
 @Controller('users')
 export class UsersController {

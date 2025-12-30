@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { Gender, Horoscope, Zodiac } from 'src/common/enums/profiles';
+import { Gender, Horoscope, Zodiac } from 'src/common/effect/enums/profiles';
 
 const GenderSchema = z.enum(["Male", "Female", "DoNotWantToSpecify"])
     .transform((str) => (Gender as any)[str]());

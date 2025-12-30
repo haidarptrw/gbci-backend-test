@@ -1,61 +1,66 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Model } from "mongoose";
 import { User } from "../schema/user.schema";
 import { InjectModel } from "@nestjs/mongoose";
-import { Effect } from "effect";
+import { Context, Effect } from "effect";
 import { DatabaseError, UserNotFound } from "src/common/errors";
 import { UpdateProfileDto } from "../dto/profile.dto";
 import { mapDateToHoroscope, mapDateToZodiac } from "src/common/utils/calculator";
+import { ProfileRepository } from "src/common/effect/services/repositories";
+import { PROFILE_REPO_TOKEN } from "./profile.token";
 
 @Injectable()
 export class ProfileService {
-    constructor(@InjectModel(User.name) private userModel: Model<User>) { }
+    constructor(
+        @Inject(PROFILE_REPO_TOKEN)
+        private readonly repo: Context.Tag.Service<ProfileRepository>
+    ) { }
 
-    getProfile(userId: string): Effect.Effect<User, UserNotFound | DatabaseError> {
-        return Effect.gen(this, function* () {
-            const user = yield* Effect.tryPromise({
-                try: () => this.userModel.findOne({ _id: userId, deletedAt: null })
-                    .select('+profile')
-                    .lean()
-                    .exec(),
-                catch: (error) => new DatabaseError({ message: 'DB query failed', originalError: error })
-            });
-
-            if (!user) {
-                return yield* new UserNotFound({ id: userId });
-            }
-
-            return user;
-        });
+    getProfile(userId: string) {
+        return Effect.provideService(
+            this.getProfileLogic(userId),
+            ProfileRepository,
+            this.repo
+        );
     }
 
-    updateProfile(userId: string, dto: UpdateProfileDto) {
-        return Effect.gen(this, function* () {
+    updateProfile(userId: string, dto: Omit<UpdateProfileDto, 'horoscope' | 'zodiac'>) {
+        return Effect.provideService(
+            this.updateProfileLogic(userId, dto),
+            ProfileRepository,
+            this.repo
+        );
+    }
+
+    public getProfileLogic(userId: string) {
+        const program = Effect.gen(function* () {
+            const repo = yield* ProfileRepository;
+            return yield* repo.getProfile(userId);
+        });
+
+        return program;
+    }
+
+    public updateProfileLogic(userId: string, dto: Omit<UpdateProfileDto, 'horoscope' | 'zodiac'>) {
+        const program = Effect.gen(function* () {
+            const repo = yield* ProfileRepository;
+
+            let finalDto: UpdateProfileDto = { ...dto };
+
             if (dto.birthday) {
                 const date = new Date(dto.birthday);
 
-                if (!dto.horoscope) {
-                    dto.horoscope = yield* mapDateToHoroscope(date);
-                }
-                if (!dto.zodiac) {
-                    dto.zodiac = yield* mapDateToZodiac(date);
-                }
-            }
-            
-            const updatedUser = yield* Effect.tryPromise({
-                try: () => this.userModel.findByIdAndUpdate(
-                    userId,
-                    { $set: { profile: dto } },
-                    { new: true, runValidators: true }
-                ).select('profile').lean().exec(),
-                catch: (error) => new DatabaseError({ message: 'Update profile failed', originalError: error })
-            });
+                const horoscope = yield* mapDateToHoroscope(date);
+                const zodiac = yield* mapDateToZodiac(date);
 
-            if (!updatedUser) {
-                return yield* new UserNotFound({ id: userId });
+                finalDto.horoscope = horoscope;
+                finalDto.zodiac = zodiac;
             }
 
-            return updatedUser.profile;
+            const updatedProfile = yield* repo.updateProfile(userId, finalDto);
+            return updatedProfile;
         });
+
+        return program;
     }
 }

@@ -4,12 +4,15 @@ import { cleanupOpenApiDoc, ZodValidationPipe } from 'nestjs-zod';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { rabbitMQConfig } from './common/queues/rabbitmq.options';
+import { AppConfigService } from './common/configs/app-config.service';
 
 async function bootstrap() {
-const app = await NestFactory.create(AppModule);
-  
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT', 3000);
+  const app = await NestFactory.create(AppModule);
+  // const appContext = await NestFactory.createApplicationContext(AppModule);
+  const configService = app .get(AppConfigService);
+  const port = configService.port;
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ZodValidationPipe());
@@ -26,6 +29,9 @@ const app = await NestFactory.create(AppModule);
 
   app.use(cookieParser())
 
+  app.connectMicroservice<MicroserviceOptions>(rabbitMQConfig(configService));
+
+  await app.startAllMicroservices();
   await app.listen(port);
   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log(`Swagger Docs available at: ${await app.getUrl()}/docs`);

@@ -1,15 +1,13 @@
 import express from 'express';
+import z from 'zod';
 
-export interface JwtPayload {
-    userId: string;
-    email: string;
-    iat?: number;
-    exp?: number;
-}
+export const JwtPayloadSchema = z.object({
+    sub: z.string(),
+    iat: z.number().optional(),
+    exp: z.number().optional()
+})
 
-export interface RefreshUser extends JwtPayload {
-    refreshToken: string;
-}
+export type JwtPayload = z.infer<typeof JwtPayloadSchema>;
 
 export interface AuthenticatedUser {
     userId: string;
