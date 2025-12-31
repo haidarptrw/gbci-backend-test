@@ -28,7 +28,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             }
         
             const userId = parse.data.sub;
-            console.log(userId);
             const user = yield* this.usersService.findById(userId);
 
             if (!user) {

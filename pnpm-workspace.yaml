@@ -1,2 +1,8 @@
 ignoredBuiltDependencies:
   - mongodb-memory-server
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@scarf/scarf'
+  - bcrypt
+  - unrs-resolver

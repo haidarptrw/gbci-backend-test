@@ -24,7 +24,7 @@ describe('ProfileController', () => {
     };
     const mockUpdateDto: UpdateProfileDto = {
         displayName: 'Mamah Jane Doe',
-        birthday: '1990-01-01'
+        birthday: '1990-09-10'
     };
 
     const mockUserResult = {

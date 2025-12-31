@@ -10,6 +10,6 @@ export const rabbitMQConfig = (configService: AppConfigService): RmqOptions => (
     queueOptions: {
       durable: true,
     },
-    noAck: false,
+    noAck: true,
   },
 });

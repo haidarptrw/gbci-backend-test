@@ -8,6 +8,8 @@ import { JwtRefreshGuard } from "src/common/guards/jwt-refresh.guard";
 import { CreateChatDto, SendMessageSchema } from "./dto/chat.dto";
 import { UserSchema_Effect } from "src/users/schema/user.schema";
 import { Ctx, EventPattern, Payload, RmqContext } from "@nestjs/microservices";
+import { getUserFromReq } from "src/common/utils/parser";
+import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 
 @ApiTags('Chats')
 @Controller('chats')
@@ -18,12 +20,12 @@ export class ChatsController {
   ) { }
 
   @Post()
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new chat or group' })
   async createChat(@Req() req: any, @Body() dto: CreateChatDto) {
     const program = Effect.gen(this, function* () {
-      const userId = yield* this.getUserId(req);
+      const userId = (yield* getUserFromReq(req))._id.toString();
 
       const members = Array.filter(
         [userId.toString(), ...(dto.userIds || [dto.userId])],
@@ -50,12 +52,12 @@ export class ChatsController {
   }
 
   @Get()
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all chats for current user' })
   async getUserChats(@Req() req: any) {
     const program = Effect.gen(this, function* () {
-      const userId = yield* this.getUserId(req);
+      const userId = (yield* getUserFromReq(req))._id.toString();
       const repo = yield* ChatRepository;
       return yield* repo.getUserChats(userId.toString());
     });
@@ -68,7 +70,7 @@ export class ChatsController {
   }
 
   @Get(':id/messages')
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get message history for a chat' })
   async getChatMessages(@Param('id') chatId: string) {
@@ -145,34 +147,6 @@ export class ChatsController {
 
     // Acknowledge RabbitMQ (Remove from queue)
     channel.ack(originalMsg);
-  }
-
-  /**
-   * Helper to get user id from request. 
-   * This request was obtained from object returned 
-   * by the Passport Strategy
-   * @param req 
-   * @returns 
-   */
-  private getUserId(req: any) {
-    return Effect.gen(this, function* () {
-      const maybeUser = yield* Effect.fromNullable(req.user).pipe(
-        Effect.mapError(() => new BadRequestException('User context missing'))
-      );
-
-      // try to parse
-      const parseResult = Schema.decodeUnknown(UserSchema_Effect)(maybeUser);
-
-      const user = yield* parseResult.pipe(
-        Effect.matchEffect({
-          onSuccess: (u) => Effect.succeed(u),
-          onFailure: () => Effect.fail(new InternalServerErrorException())
-        })
-      )
-
-      const userId = user._id;
-      return userId;
-    })
   }
 
 }

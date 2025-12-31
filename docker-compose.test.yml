@@ -1,9 +1,37 @@
 services:
-  api:
+  # Test Database (Ephemeral)
+  mongo_test:
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27018:27017" # Avoid conflict with dev DB on 27017
+
+  # Test Message Queue (Ephemeral)
+  rabbitmq_test:
+    image: rabbitmq:4-management
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5673:5672" # Avoid conflict with dev RMQ
+
+  # The Test Runner
+  app_test:
     build:
       context: .
       dockerfile: Dockerfile
-      target: test
+      target: development
     environment:
-      NODE_ENV: test
+      - MONGO_HOST=mongo_test
+      - RABBITMQ_HOST=rabbitmq_test
+      - NODE_ENV=test
+    env_file:
+      - .env.test
+    depends_on:
+      - mongo_test
+      - rabbitmq_test
     command: pnpm run test:e2e
