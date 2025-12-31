@@ -29,7 +29,8 @@ import { AuthModule } from "src/auth/auth.module";
                 imports: [AppConfigModule],
                 inject: [AppConfigService],
                 useFactory: (config: AppConfigService) => {
-                    return rabbitMQConfig(config);
+                    const options =  rabbitMQConfig(config, true);
+                    return options;
                 },
             }
         ])

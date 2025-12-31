@@ -5,8 +5,10 @@ import { AppConfigService } from "../configs/app-config.service";
 
 export const MAIL_CLIENT_TOKEN = Symbol("MAIL_CLIENT_TOKEN");
 
+/**
+ * Service for sending email (required for forgot password)
+ */ 
 @Injectable()
-/// Service for sending email (required for forgot password)
 export class MailService {
     constructor(
         @Inject(MAIL_CLIENT_TOKEN) 

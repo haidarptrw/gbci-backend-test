@@ -1,4 +1,4 @@
-import { Console, Context, Effect } from "effect";
+import { Context, Effect } from "effect";
 import { MailError } from "../errors";
 import * as nodemailer from "nodemailer";
 

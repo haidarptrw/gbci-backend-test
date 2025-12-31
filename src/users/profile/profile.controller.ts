@@ -1,32 +1,38 @@
-import { UseGuards, Controller, Get, Req, Param, NotFoundException, InternalServerErrorException, Put, UsePipes, Body, BadRequestException, HttpCode, HttpStatus } from "@nestjs/common";
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { UseGuards, Controller, Get, Req, Param, NotFoundException, InternalServerErrorException, Put, Body, HttpCode, HttpStatus } from "@nestjs/common";
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiCookieAuth, ApiBody, ApiParam } from "@nestjs/swagger";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 import { ProfileService } from "./profile.service";
-import { Effect, Exit, Match, Option, Schema as EffectSchema } from "effect";
+import { Effect, Match } from "effect";
 import { AppError } from "src/common/errors";
 import { Profile } from "../schema/profile.schema";
 import { getUserFromReq } from "src/common/utils/parser";
 import { UpdateProfileDto } from "../dto/profile.dto";
 
 @ApiTags('Profile')
-@ApiBearerAuth()
 @Controller('users/profile')
 export class ProfileController {
     constructor(private readonly profileService: ProfileService) { }
-
+    
     @Get(':userId')
+    @ApiParam({ name: 'userId', description: 'User ID', required: true })
     @ApiOperation({ summary: 'Get a user profile by ID' })
     @ApiResponse({ status: 200, description: 'Profile successfully retrieved', type: Profile })
     @ApiResponse({ status: 404, description: 'User not found' })
     async getUserProfile(@Param('userId') userId: string) {
         return this.runEffect(this.profileService.getProfile(userId));
     }
-
+    
     @Put()
     @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth()
+    @ApiCookieAuth()
     @ApiOperation({ summary: 'Create or Update profile' })
+    @ApiBody({ type: UpdateProfileDto })    
     @ApiResponse({ status: 200, description: 'Profile successfully updated', type: UpdateProfileDto })
+    @ApiResponse({ status: 400, description: 'Invalid request' })
     @ApiResponse({ status: 404, description: 'User not found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
     @UseGuards(JwtAuthGuard)
     async updateMyProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
         const userId = (await Effect.runPromise(getUserFromReq(req)))._id.toString();

@@ -218,28 +218,25 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   it('should handle full message flow: WS -> RMQ -> DB -> WS Broadcast', async () => {
     const messageContent = 'Hello from RabbitMQ E2E!';
 
-    // 1. Setup Listener for User B (Receiver)
-    // We expect to receive 'newMessage' or 'notification' depending on your gateway logic
-    // Your controller emits 'newMessage' to `chat_${chatId}` room.
+    // Setup Listener for User B (Receiver)
+    // We expect to receive 'newMessage' or 'notification'
     const receiverPromise = waitForEvent(userB.socket as any, 'newMessage');
 
-    // 2. User A sends message
     userA.socket?.emit('sendMessage', {
       chatId: createdChatId,
       content: messageContent,
-      senderId: userA.id, // Ideally senderId is inferred from token on backend, but based on your DTO
+      senderId: userA.id,
     });
 
-    // 3. Await the loop
+    // Await the loop
     // This waits for: A -> Gateway -> RabbitMQ -> Controller -> DB -> Gateway -> B
     const receivedMessage = await receiverPromise;
 
-    // 4. Assertions
     expect(receivedMessage).toBeDefined();
     expect(receivedMessage.content).toBe(messageContent);
-    expect(receivedMessage.sender._id).toBe(userA.id); // Assuming populate works
+    expect(receivedMessage.sender._id).toBe(userA.id);
     expect(receivedMessage.chat).toBe(createdChatId);
-  }, 10000); // Increased timeout for RMQ latency
+  }, 15000);
 
   // =================================================================
   // 5. DATA PERSISTENCE
