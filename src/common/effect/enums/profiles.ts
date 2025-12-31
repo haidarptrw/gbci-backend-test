@@ -3,7 +3,6 @@ import { Data } from "effect";
 export type Gender = Data.TaggedEnum<{
     Male: {},
     Female: {},
-    DoNotWantToSpecify: {}
 }>
 
 export const Gender = Data.taggedEnum<Gender>();
