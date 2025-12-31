@@ -3,7 +3,6 @@ import { Types, Document } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Message extends Document {
-
     @Prop({ type: Types.ObjectId, ref: 'Chat', required: true })
     chat!: Types.ObjectId;
 
@@ -13,7 +12,6 @@ export class Message extends Document {
     @Prop({ required: true, trim: true })
     content!: string;
 
-    // Array of users who have read this message
     @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
     readBy!: Types.ObjectId[];
 

@@ -93,7 +93,7 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   });
 
   // =================================================================
-  // 1. SETUP & AUTH
+  // SETUP & AUTH
   // =================================================================
 
   it('should register and login User A (Sender)', async () => {
@@ -145,7 +145,7 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   });
 
   // =================================================================
-  // 2. HTTP: CREATE CHAT
+  // HTTP: CREATE CHAT
   // =================================================================
 
   it('should create a 1-on-1 chat via HTTP', async () => {
@@ -166,7 +166,7 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   });
 
   // =================================================================
-  // 3. WEBSOCKET CONNECTION
+  // WEBSOCKET CONNECTION
   // =================================================================
 
   it('should connect both users to WebSocket Gateway', (done) => {
@@ -191,7 +191,7 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   });
 
   it('should join the chat room (User A & B)', (done) => {
-    // user join via handleJoinChat API in ChatGateway
+    // user join via handleJoinChat API in ChatsGateway
     let joinedCount = 0;
     const checkDone = () => {
       joinedCount++;
@@ -212,14 +212,13 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   });
 
   // =================================================================
-  // 4. MESSAGING FLOW (The Core Test)
+  // MESSAGING FLOW (The Core Test)
   // =================================================================
 
   it('should handle full message flow: WS -> RMQ -> DB -> WS Broadcast', async () => {
     const messageContent = 'Hello from RabbitMQ E2E!';
 
     // Setup Listener for User B (Receiver)
-    // We expect to receive 'newMessage' or 'notification'
     const receiverPromise = waitForEvent(userB.socket as any, 'newMessage');
 
     userA.socket?.emit('sendMessage', {
@@ -228,8 +227,6 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
       senderId: userA.id,
     });
 
-    // Await the loop
-    // This waits for: A -> Gateway -> RabbitMQ -> Controller -> DB -> Gateway -> B
     const receivedMessage = await receiverPromise;
 
     expect(receivedMessage).toBeDefined();
@@ -239,7 +236,7 @@ describe('Chats E2E Test (Mongodb and RabbitMQ involved)', () => {
   }, 15000);
 
   // =================================================================
-  // 5. DATA PERSISTENCE
+  // DATA PERSISTENCE
   // =================================================================
 
   it('should retrieve message history via HTTP', async () => {

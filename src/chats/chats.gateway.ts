@@ -67,7 +67,6 @@ export class ChatsGateway {
     @websockets.ConnectedSocket() client: Socket,
     @websockets.MessageBody() chatId: string,
   ): websockets.WsResponse<{ event: string; room: string }> {
-    // You might want to add validation here to ensure user is actually a member of this chat
     const roomName = `chat_${chatId}`;
     client.join(roomName);
     console.log(`User ${client.data.userId} joined room ${roomName}`);

@@ -161,7 +161,7 @@ export function mapDateToZodiac(date: Date): Effect.Effect<Zodiac, InvalidDateEr
                 }
             }
 
-            // FALLBACK: Handles the unhandled cases from the hardcoded table
+            // Handles the unhandled cases from the hardcoded table
             const year = date.getFullYear();            
             const offset = Math.abs(year - 4) % 12;
             switch (offset) {
